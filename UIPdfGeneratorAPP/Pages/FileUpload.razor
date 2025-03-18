@@ -1,0 +1,55 @@
+﻿@page "/file-upload"
+@inject HttpClient Http
+
+<h3>uPLOAD fILE</h3>
+
+<InputFile OnChange="OnInputFileChange" />
+<button @onclick="GeneratePdf">PDF Oluştur</button>
+
+@if (!string.IsNullOrEmpty(ResultMessage))
+{
+    <div>
+        <p>File uploaded successfully! URL: <a href="@ResultMessage" target="_blank">@ResultMessage</a></p>
+    </div>
+}
+
+@code {
+    private IBrowserFile file;
+    private string ResultMessage;
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        file = e.File;
+    }
+
+    private async Task GeneratePdf()
+    {
+        if (file == null)
+        {
+            return;
+        }
+
+        var content = new MultipartFormDataContent();
+        var fileContent = new StreamContent(file.OpenReadStream());
+        content.Add(fileContent, "fileUrl", file.Name); // "fileUrl" backend part params name
+
+        try
+        {
+            var response = await Http.PostAsync("api/PdfGenerator/generate-file", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                ResultMessage = await response.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                ResultMessage = $"Error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}";
+            }
+        }
+        catch (Exception ex)
+        {
+            ResultMessage = $"An error occured while creating the request: {ex.Message}";
+        }
+
+    }
+}
